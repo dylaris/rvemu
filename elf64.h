@@ -13,7 +13,11 @@
 #define ELFCLASS64      2       /* 64-bit objects */
 #define ELFCLASSNUM     3
 
-#define PT_LOAD         1       /* Loadable program segment */
+#define PT_LOAD 1         /* Loadable program segment */
+
+#define PF_X    (1 << 0)  /* Segment is executable */
+#define PF_W    (1 << 1)  /* Segment is writable */
+#define PF_R    (1 << 2)  /* Segment is readable */
 
 typedef struct {
     u8  ident[EI_NIDENT]; /* Magic number and other info */

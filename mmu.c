@@ -2,12 +2,44 @@
 #include "elf64.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 static void mmu__load_segment(MMU *mmup, ProgHeader *phdrp, int fd)
 {
     UNUSED(mmup);
-    UNUSED(phdrp);
-    UNUSED(fd);
+
+    u64       pagesz = (u64) getpagesize();
+    u64       offset = phdrp->offset;
+    HostVAddr vaddr  = TO_HOST(phdrp->vaddr);
+    HostVAddr aligned_vaddr = ROUNDDOWN(vaddr, pagesz);
+    u64       memsz  = phdrp->memsz + (vaddr - aligned_vaddr);
+    u64       filesz = phdrp->filesz + (vaddr - aligned_vaddr);
+
+    int prot = 0; // mmap protection
+    if (phdrp->flags & PF_R) prot |= PROT_READ;
+    if (phdrp->flags & PF_W) prot |= PROT_WRITE;
+    if (phdrp->flags & PF_X) prot |= PROT_EXEC;
+
+    HostVAddr mmap_vaddr = (HostVAddr) mmap(
+        (void *) aligned_vaddr,
+        memsz, prot,
+        MAP_FIXED | MAP_PRIVATE,
+        fd, ROUNDDOWN(offset, pagesz));
+    assert(mmap_vaddr == aligned_vaddr);
+
+    // .bss section
+    u64 remaining_bss = ROUNDUP(memsz, pagesz) - ROUNDUP(filesz, pagesz);
+    if (remaining_bss > 0) {
+        mmap_vaddr = (HostVAddr) mmap(
+            (void *) (aligned_vaddr + ROUNDUP(filesz, pagesz)),
+            remaining_bss, prot,
+            MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS,
+            -1, 0);
+        assert(mmap_vaddr == aligned_vaddr + ROUNDUP(filesz, pagesz));
+    }
 }
 
 void mmu_load_elf(MMU *mmup, FILE *fp)
@@ -27,7 +59,7 @@ void mmu_load_elf(MMU *mmup, FILE *fp)
         fatal("only support riscv64 elf file");
 
     // Set entry point
-    mmup->entry = ehdr.entry;
+    mmup->entry = (GuestVAddr) ehdr.entry;
 
     // Load segment
     for (u64 i = 0; i < (u64) ehdr.phnum; i++) {

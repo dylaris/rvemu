@@ -35,13 +35,11 @@
 #include <stdio.h>
 
 #define GUEST_MEMORY_OFFSET 0x088800000000ULL
-#define TO_HOST(addr)  (addr + GUEST_MEMORY_OFFSET)
-#define TO_GUEST(addr) (addr - GUEST_MEMORY_OFFSET)
+#define TO_HOST(addr)  ((HostVAddr)  (addr + GUEST_MEMORY_OFFSET))
+#define TO_GUEST(addr) ((GuestVAddr) (addr - GUEST_MEMORY_OFFSET))
 
 typedef u64 HostVAddr;
-typedef u64 HostPAddr;
 typedef u64 GuestVAddr;
-typedef u64 GuestPAddr;
 
 typedef struct {
     GuestVAddr entry;
