@@ -4,7 +4,7 @@
 #include "utils.h"
 
 typedef enum {
-    NONE,
+    NONE = 0,
     DIRECT_JUMP,
     INDIRECT_JUMP,
     ECALL
