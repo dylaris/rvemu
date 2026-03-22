@@ -7,7 +7,7 @@ EXE_LDFLAGS =
 LIB_CFLAGS  = $(CFLAGS) -fPIC
 LIB_LDFLAGS = -shared -Wl,--version-script=src/export.sym
 
-all: rvemu
+all: rvemu lib
 
 rvemu: src/one.c
 	$(CC) $(EXE_CFLAGS) -o rvemu src/one.c $(EXE_LDFLAGS)
@@ -20,7 +20,7 @@ clean:
 
 help:
 	@echo "===================================================="
-	@echo "Available Targets: (builds the executable defaultly)"
+	@echo "Available Targets: (builds the exec and lib defaultly)"
 	@echo "===================================================="
 	@echo "help:  		Display this information"
 	@echo "clean: 		Clean object files and executable file"

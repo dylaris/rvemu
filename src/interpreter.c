@@ -4,13 +4,13 @@
 
 #include <stdlib.h>
 
-typedef void (Func)(CPU *, Instruction *);
+typedef void (Func)(CPU *, Inst *);
 
 static Func *funcs[] = { };
 
 void exec_block_interp(CPU *cpup)
 {
-    Instruction inst = {0};
+    Inst inst = {0};
     while (1) {
         // Fetch
         u32 data = *(u32 *) TO_HOST(cpup->pc);

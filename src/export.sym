@@ -1,6 +1,7 @@
 {
     global:
         api_decode;
+        api_lookup;
     local:
         *;
 };
