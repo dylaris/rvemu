@@ -87,6 +87,7 @@ typedef struct {
     i8 rd;
     i8 rs1;
     i8 rs2;
+    i8 rs3;
     i32 imm;
     InstKind kind;
     bool rvc;   // Is RISCV compression extension?
@@ -96,9 +97,13 @@ typedef struct {
 typedef struct {
     const char *name;
     InstKind kind;
-    u8 opcode;
-    u8 funct3;
-    u8 funct7;
+    u16 opcode;
+    u16 funct2;
+    u16 funct3;
+    u16 funct5_a; // for A extension [31:25]
+    u16 funct5_f; // for F/D extension [24:20]
+    u16 funct7;
+    u16 funct12;
     Inst (*decode)(InstKind, u32);
 } InstDef;
 

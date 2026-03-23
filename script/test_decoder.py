@@ -10,19 +10,24 @@ class Inst(ctypes.Structure):
         ("rd",  ctypes.c_int8),
         ("rs1", ctypes.c_int8),
         ("rs2", ctypes.c_int8),
+        ("rs3", ctypes.c_int8),
         ("imm", ctypes.c_int32),
         ("kind", ctypes.c_int),
-        ("brk", ctypes.c_bool),
         ("rvc", ctypes.c_bool),
+        ("brk", ctypes.c_bool),
     ]
 
 class InstDef(ctypes.Structure):
     _fields_ = [
         ("name", ctypes.c_char_p),
         ("kind", ctypes.c_int),
-        ("opcode", ctypes.c_uint8),
-        ("funct3", ctypes.c_uint8),
-        ("funct7", ctypes.c_uint8),
+        ("opcode", ctypes.c_uint16),
+        ("funct2", ctypes.c_uint16),
+        ("funct3", ctypes.c_uint16),
+        ("funct5_a", ctypes.c_uint16),
+        ("funct5_f", ctypes.c_uint16),
+        ("funct7", ctypes.c_uint16),
+        ("funct12", ctypes.c_uint16),
         ("decode", ctypes.c_void_p),
     ]
 
@@ -74,17 +79,41 @@ def compare(index, annos, inst, inst_def):
         if act != exp:
             details["opcode"] = f"{exp} vs {act}"
             details["err"] = True
+    if "funct2" in ident:
+        exp = parse_int(ident["funct2"])
+        act = inst_def.funct2
+        if act != exp:
+            details["funct2"] = f"{exp} vs {act}"
+            details["err"] = True
     if "funct3" in ident:
         exp = parse_int(ident["funct3"])
         act = inst_def.funct3
         if act != exp:
             details["funct3"] = f"{exp} vs {act}"
             details["err"] = True
+    if "funct5_a" in ident:
+        exp = parse_int(ident["funct5_a"])
+        act = inst_def.funct5_a
+        if act != exp:
+            details["funct5_a"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "funct5_f" in ident:
+        exp = parse_int(ident["funct5_f"])
+        act = inst_def.funct5_f
+        if act != exp:
+            details["funct5_f"] = f"{exp} vs {act}"
+            details["err"] = True
     if "funct7" in ident:
         exp = parse_int(ident["funct7"])
         act = inst_def.funct7
         if act != exp:
             details["funct7"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "funct12" in ident:
+        exp = parse_int(ident["funct12"])
+        act = inst_def.funct12
+        if act != exp:
+            details["funct12"] = f"{exp} vs {act}"
             details["err"] = True
 
     if "rd" in expect:
@@ -115,6 +144,8 @@ def compare(index, annos, inst, inst_def):
     return details
 
 def run_test(filepath):
+    print(f"{os.path.basename(filepath)}: ", end="", flush=True)
+
     with open(filepath, "r") as f:
         lines = [l.strip() for l in f.readlines()]
 
@@ -125,8 +156,9 @@ def run_test(filepath):
     data = open("tmp.bin", "rb").read()
     os.system("rm -f tmp.o tmp.bin")
 
-    insts = [int.from_bytes(data[i:i+4], "little") for i in range(0, len(data), 4)]
     annos = parse_test_annos(lines)
+    assert len(data) == len(annos["expect"]) * 4, f"mismatched {len(data)} vs {len(annos["expect"]) * 4}"
+    insts = [int.from_bytes(data[i:i+4], "little") for i in range(0, len(data), 4)]
     failures = []
 
     for i in range(0, len(insts)):
@@ -142,9 +174,9 @@ def run_test(filepath):
             failures.append(details)
 
     if len(failures) == 0:
-        print(f"{os.path.basename(filepath)}: PASS")
+        print("PASS")
     else:
-        print(f"{os.path.basename(filepath)}: [")
+        print("[")
         for detail in failures:
             print("  {")
             for k, v in detail.items():
