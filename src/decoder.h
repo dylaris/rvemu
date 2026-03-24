@@ -72,14 +72,6 @@ typedef enum {
     IK_FCVT_L_D, IK_FCVT_LU_D, IK_FCVT_D_L, IK_FCVT_D_LU,
     IK_FMV_X_D, IK_FMV_D_X,
 
-    // RVC - Compressed Instructions Extension
-    IK_C_ADDI, IK_C_ADDIW, IK_C_LI, IK_C_LUI, IK_C_SLLI, IK_C_SRLI, IK_C_SRAI,
-    IK_C_ADD, IK_C_SUB, IK_C_XOR, IK_C_OR, IK_C_AND, IK_C_ADDW, IK_C_SUBW,
-    IK_C_LWSP, IK_C_SWSP, IK_C_LDSP, IK_C_SDSP,
-    IK_C_LW, IK_C_SW, IK_C_LD, IK_C_SD,
-    IK_C_J, IK_C_JAL, IK_C_JR, IK_C_JALR, IK_C_BEQZ, IK_C_BNEZ,
-    IK_C_EBREAK, IK_C_NOP,
-
     num_insts,
 } InstKind;
 
@@ -97,13 +89,23 @@ typedef struct {
 typedef struct {
     const char *name;
     InstKind kind;
-    u16 opcode;
-    u16 funct2;
-    u16 funct3;
-    u16 funct5_a; // for A extension [31:25]
-    u16 funct5_f; // for F/D extension [24:20]
-    u16 funct7;
-    u16 funct12;
+
+    u16 opcode;      // [6:0]
+    u16 funct2;      // [26:25]
+    u16 funct3;      // [14:12]
+    u16 funct5high;  // [31:27]
+    u16 funct5low;   // [24:20]
+    u16 funct7;      // [31:25]
+    u16 funct12;     // [31:20]
+
+    u16 copcode;     // [1:0]
+    u16 cfunct1;     // [12]
+    u16 cfunct2high; // [11:10]
+    u16 cfunct2low;  // [6:5]
+    u16 cfunct3;     // [15:13]
+    u16 cfunct5high; // [11:7]
+    u16 cfunct5low;  // [6:2]
+
     Inst (*decode)(InstKind, u32);
 } InstDef;
 

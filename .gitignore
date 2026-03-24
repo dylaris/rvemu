@@ -1,4 +1,5 @@
 playground/fib
 rvemu
+librvemu.so
 tags
 inst_list.md

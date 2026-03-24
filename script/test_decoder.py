@@ -21,13 +21,22 @@ class InstDef(ctypes.Structure):
     _fields_ = [
         ("name", ctypes.c_char_p),
         ("kind", ctypes.c_int),
+
         ("opcode", ctypes.c_uint16),
         ("funct2", ctypes.c_uint16),
         ("funct3", ctypes.c_uint16),
-        ("funct5_a", ctypes.c_uint16),
-        ("funct5_f", ctypes.c_uint16),
+        ("funct5high", ctypes.c_uint16),
+        ("funct5low", ctypes.c_uint16),
         ("funct7", ctypes.c_uint16),
         ("funct12", ctypes.c_uint16),
+
+        ("copcode", ctypes.c_uint16),
+        ("cfunct2high", ctypes.c_uint16),
+        ("cfunct2low", ctypes.c_uint16),
+        ("cfunct3", ctypes.c_uint16),
+        ("cfunct5high", ctypes.c_uint16),
+        ("cfunct5low", ctypes.c_uint16),
+
         ("decode", ctypes.c_void_p),
     ]
 
@@ -91,17 +100,17 @@ def compare(index, annos, inst, inst_def):
         if act != exp:
             details["funct3"] = f"{exp} vs {act}"
             details["err"] = True
-    if "funct5_a" in ident:
-        exp = parse_int(ident["funct5_a"])
-        act = inst_def.funct5_a
+    if "funct5high" in ident:
+        exp = parse_int(ident["funct5high"])
+        act = inst_def.funct5high
         if act != exp:
-            details["funct5_a"] = f"{exp} vs {act}"
+            details["funct5high"] = f"{exp} vs {act}"
             details["err"] = True
-    if "funct5_f" in ident:
-        exp = parse_int(ident["funct5_f"])
-        act = inst_def.funct5_f
+    if "funct5low" in ident:
+        exp = parse_int(ident["funct5low"])
+        act = inst_def.funct5low
         if act != exp:
-            details["funct5_f"] = f"{exp} vs {act}"
+            details["funct5low"] = f"{exp} vs {act}"
             details["err"] = True
     if "funct7" in ident:
         exp = parse_int(ident["funct7"])
