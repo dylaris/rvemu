@@ -31,6 +31,7 @@ class InstDef(ctypes.Structure):
         ("funct12", ctypes.c_uint16),
 
         ("copcode", ctypes.c_uint16),
+        ("cfunct1", ctypes.c_uint16),
         ("cfunct2high", ctypes.c_uint16),
         ("cfunct2low", ctypes.c_uint16),
         ("cfunct3", ctypes.c_uint16),
@@ -82,6 +83,7 @@ def compare(index, annos, inst, inst_def):
         if act != exp:
             details["name"] = f"{exp} vs {act}"
             details["err"] = True
+
     if "opcode" in ident:
         exp = parse_int(ident["opcode"])
         act = inst_def.opcode
@@ -125,6 +127,49 @@ def compare(index, annos, inst, inst_def):
             details["funct12"] = f"{exp} vs {act}"
             details["err"] = True
 
+    if "copcode" in ident:
+        exp = parse_int(ident["copcode"])
+        act = inst_def.copcode
+        if act != exp:
+            details["copcode"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct1" in ident:
+        exp = parse_int(ident["cfunct1"])
+        act = inst_def.cfunct1
+        if act != exp:
+            details["cfunct1"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct2high" in ident:
+        exp = parse_int(ident["cfunct2high"])
+        act = inst_def.cfunct2high
+        if act != exp:
+            details["cfunct2high"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct2low" in ident:
+        exp = parse_int(ident["cfunct2low"])
+        act = inst_def.cfunct2low
+        if act != exp:
+            details["cfunct2low"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct3" in ident:
+        exp = parse_int(ident["cfunct3"])
+        act = inst_def.cfunct3
+        if act != exp:
+            details["cfunct3"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct5high" in ident:
+        exp = parse_int(ident["cfunct5high"])
+        act = inst_def.cfunct5high
+        if act != exp:
+            details["cfunct5high"] = f"{exp} vs {act}"
+            details["err"] = True
+    if "cfunct5low" in ident:
+        exp = parse_int(ident["cfunct5low"])
+        act = inst_def.cfunct5low
+        if act != exp:
+            details["cfunct5low"] = f"{exp} vs {act}"
+            details["err"] = True
+
     if "rd" in expect:
         exp = parse_int(expect["rd"])
         act = inst.rd
@@ -166,7 +211,10 @@ def run_test(filepath):
     os.system("rm -f tmp.o tmp.bin")
 
     annos = parse_test_annos(lines)
-    assert len(data) == len(annos["expect"]) * 4, f"mismatched {len(data)} vs {len(annos["expect"]) * 4}"
+    if os.path.basename(filepath).startswith("c."):
+        assert len(data) == len(annos["expect"]) * 2, f"mismatched {len(data)} vs {len(annos["expect"]) * 2}"
+    else:
+        assert len(data) == len(annos["expect"]) * 4, f"mismatched {len(data)} vs {len(annos["expect"]) * 4}"
     insts = [int.from_bytes(data[i:i+4], "little") for i in range(0, len(data), 4)]
     failures = []
 

@@ -2,4 +2,6 @@ playground/fib
 rvemu
 librvemu.so
 tags
-inst_list.md
+tmp/
+playground/asm/*.bin
+playground/discard
