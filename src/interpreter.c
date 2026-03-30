@@ -246,7 +246,6 @@ static void func_##name(CPU *cpup, Inst *instp) \
     instp->brk = true; \
     cpup->reenter_pc = cpup->pc + 4; \
     cpup->brkcode = ECALL; \
-    fatal("unsupported ecall for now"); \
 }
 
 #define GEN_CSR(name, a1, a2, a3, a4) \

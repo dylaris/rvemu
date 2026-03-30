@@ -1,4 +1,5 @@
 #include "machine.h"
+#include "syscall.h"
 #include "utils.h"
 
 #include <assert.h>
@@ -18,6 +19,10 @@ int main(int argc, char **argv)
     while (1) {
         BreakCode brkcode = machine_step(&machine);
         assert(brkcode == ECALL);
+
+        SyscallNr syscall_nr = (SyscallNr) machine.cpu.gp_regs[RI_A7];
+        u64 ret = do_syscall(&machine, syscall_nr);
+        machine.cpu.gp_regs[RI_A0] = ret;
     }
 
     return 0;

@@ -2,4 +2,5 @@
 #include "mmu.c"
 #include "decoder.c"
 #include "machine.c"
+#include "syscall.c"
 #include "rvemu.c"

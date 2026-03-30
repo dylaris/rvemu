@@ -25,4 +25,6 @@ typedef double   f64;
 #define MIN(a, b)       (a) < (b) ? (a) : (b)
 #define MAX(a, b)       (a) < (b) ? (b) : (a)
 
+#define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+
 #endif // UTILS_H
