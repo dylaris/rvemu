@@ -21,7 +21,6 @@ class InstDef(ctypes.Structure):
     _fields_ = [
         ("name", ctypes.c_char_p),
         ("kind", ctypes.c_int),
-        ("raw", ctypes.c_uint32),
 
         ("opcode", ctypes.c_uint16),
         ("funct2", ctypes.c_uint16),

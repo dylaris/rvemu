@@ -3,7 +3,7 @@
 
 #include "mmu.h"
 
-#include "string.h"
+#include <string.h>
 
 // host_end = TO_HOST(heap_end)
 // heap_end = TO_GUEST(host_end)
@@ -18,29 +18,40 @@ typedef struct {
 void mem_load_elf(Memory *mem, FILE *f);
 GuestVAddr mem_alloc(Memory *mem, i64 size);
 
-static inline void mem_write(GuestVAddr addr, void *data, u64 len)
+static inline void mem_write(GuestVAddr addr, const void *data, u64 len)
 {
     memcpy((void *) mmu_to_host(addr), data, len);
 }
 
-static inline u8 mem_read_byte(GuestVAddr addr)
+static inline void mem_read(GuestVAddr addr, void *buf, u64 len)
 {
-    return *(u8 *) mmu_to_host(addr);
+    memcpy(buf, (void *) mmu_to_host(addr), len);
 }
 
-static inline u16 mem_read_halfword(GuestVAddr addr)
-{
-    return *(u16 *) mmu_to_host(addr);
+#define DECL_MEM_WRITE_X(type) \
+static inline void mem_write_##type(GuestVAddr addr, type val) \
+{ \
+    *(type *) mmu_to_host(addr) = val; \
 }
 
-static inline u32 mem_read_word(GuestVAddr addr)
-{
-    return *(u32 *) mmu_to_host(addr);
+DECL_MEM_WRITE_X(u8)
+DECL_MEM_WRITE_X(u16)
+DECL_MEM_WRITE_X(u32)
+DECL_MEM_WRITE_X(u64)
+
+#define DECL_MEM_READ_X(type) \
+static inline type mem_read_##type(GuestVAddr addr) \
+{ \
+    return *(type *) mmu_to_host(addr); \
 }
 
-static inline u64 mem_read_doubleword(GuestVAddr addr)
-{
-    return *(u64 *) mmu_to_host(addr);
-}
+DECL_MEM_READ_X(u8)
+DECL_MEM_READ_X(u16)
+DECL_MEM_READ_X(u32)
+DECL_MEM_READ_X(u64)
+DECL_MEM_READ_X(i8)
+DECL_MEM_READ_X(i16)
+DECL_MEM_READ_X(i32)
+DECL_MEM_READ_X(i64)
 
 #endif // MEMORY_H

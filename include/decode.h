@@ -183,7 +183,6 @@ typedef struct InstrInfo InstrInfo;
 struct InstrInfo {
     const char *name;
     InstrKind kind;
-    u32 raw;
 
     u16 opcode;      // [6:0]
     u16 funct2;      // [26:25]
@@ -202,7 +201,7 @@ struct InstrInfo {
     u16 cfunct5high; // [11:7]
     u16 cfunct5low;  // [6:2]
 
-    Instr (*decode)(const InstrInfo *);
+    Instr (*decode)(const InstrInfo *, u32);
 };
 
 typedef enum {

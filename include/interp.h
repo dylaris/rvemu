@@ -3,6 +3,6 @@
 
 #include "cpu.h"
 
-bool interp_block(CPUState *state);
+void interp_block(CPUState *state);
 
 #endif // INTERP_H

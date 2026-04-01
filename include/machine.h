@@ -9,7 +9,7 @@ typedef struct {
     Memory mem;
 } Machine;
 
-bool machine_step(Machine *machine);
+void machine_step(Machine *machine);
 bool machine_run(Machine *machine);
 void machine_init(Machine *machine, const char *prog, int argc, char **argv);
 void machine_fini(Machine *machine);

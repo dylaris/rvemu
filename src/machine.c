@@ -47,49 +47,70 @@ static void machine__setup(Machine *machine, int argc, char **argv)
     mem_write(stack_end, (void *) &argc, sizeof(argc));
 }
 
-bool machine_step(Machine *machine)
+void machine_step(Machine *machine)
 {
     while (1) {
         cpu_clean_trace(&machine->state);
-
-        if (!interp_block(&machine->state))
-            return false;
-        assert(machine->state.trace.exit_reason != BLOCK_NONE);
-
+        interp_block(&machine->state);
         machine->state.pc = machine->state.trace.target_pc;
-
-        // TODO: more exit reason
-        if (machine->state.trace.exit_reason != BLOCK_JUMP)
-            break;
     }
-    assert(machine->state.trace.exit_reason == BLOCK_ECALL);
-
-    return true;
 }
 
-static u64 machine__syscall(Machine *machine)
+static void do_syscall(Machine *machine)
 {
-    SyscallNr syscall_nr = (SyscallNr) cpu_get_gpr(&machine->state, GPR_A7);
-    u64 ret = do_syscall(machine, syscall_nr);
+    SyscallNr n = (SyscallNr) cpu_get_gpr(&machine->state, GPR_A7);
+    SyscallFunc f = syscall_get(n);
+    u64 ret = f(machine);
     cpu_set_gpr(&machine->state, GPR_A0, ret);
-    return ret;
+}
+
+static void do_trap(Machine *machine, Trap trap)
+{
+    switch (trap.kind) {
+    case TRAP_ECALL_U:
+        do_syscall(machine);
+        machine->state.pc += 4;
+        break;
+
+    case TRAP_ILLEGAL_INSTR:
+        fatalf("illegal instruction '' @ 0x%016lx", trap.fault_addr);
+
+    case TRAP_LOAD_FAULT:
+    case TRAP_STORE_FAULT:
+        fatalf("memory access fault @ 0x%016lx", trap.fault_addr);
+
+    case TRAP_LOAD_MISALIGN:
+    case TRAP_STORE_MISALIGN:
+        fatalf("memory align fault @ 0x%016lx", trap.fault_addr);
+
+    case TRAP_CRASH:
+        fatalf("this emulator crashed: %s", strerror(errno));
+
+    default:
+        unreachable();
+    }
 }
 
 bool machine_run(Machine *machine)
 {
-    while (1) {
-        if (!machine_step(machine))
-            return false;
+    jmp_buf trap_buf;
 
-        // TODO: more trap (only syscall for now)
-        machine__syscall(machine);
+    trap_init();
+
+    while (1) {
+        if (setjmp(trap_buf) == 0) {
+            trap_enter(&trap_buf);
+            machine_step(machine);
+            trap_leave();
+        } else {
+            Trap trap = trap_get();
+            do_trap(machine, trap);
+        }
     }
 }
 
 void machine_init(Machine *machine, const char *prog, int argc, char **argv)
 {
-    trap_init();
-
     machine__load(machine, prog);
     machine__setup(machine, argc-1, argv+1);
 }

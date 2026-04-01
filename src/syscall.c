@@ -14,8 +14,6 @@ const char *syscall_to_string(SyscallNr n)
 #undef X
 }
 
-typedef u64 (*SyscallFunc)(Machine *);
-
 #define GET(name, reg) u64 name = cpu_get_gpr(&machine->state, reg)
 
 static u64 sys_exit(Machine *machine)
@@ -129,11 +127,11 @@ static SyscallFunc syscall_table[] = {
 };
 #undef X
 
-u64 do_syscall(Machine *machine, SyscallNr n)
+SyscallFunc syscall_get(SyscallNr n)
 {
     assert(n < ARRAY_SIZE(syscall_table));
     SyscallFunc func = syscall_table[n];
     if (!func)
         fatalf("unknown syscall number: %d", n);
-    return func(machine);
+    return func;
 }

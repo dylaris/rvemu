@@ -1,7 +1,6 @@
 #include "interp.h"
 #include "decode.h"
 #include "trap.h"
-#include "mmu.h"
 
 #include <math.h>
 
@@ -174,7 +173,7 @@ static void interp__##name(CPUState *state, Instr *instr) \
 static void interp__##name(CPUState *state, Instr *instr) \
 { \
     GuestVAddr addr = cpu_get_gpr(state, instr->rs1) + (i64) instr->imm; \
-    cpu_set_gpr(state, instr->rd, *(type *) mmu_to_host(addr)); \
+    cpu_set_gpr(state, instr->rd, mem_read_##type(addr)); \
 }
 
 #define GEN_OP_IMM(name, expr, a2, a3, a4) \
@@ -197,7 +196,7 @@ static void interp__##name(CPUState *state, Instr *instr) \
 { \
     u64 val  = cpu_get_gpr(state, instr->rs2); \
     GuestVAddr addr = cpu_get_gpr(state, instr->rs1) + (i64) instr->imm; \
-    *(type *) mmu_to_host(addr) = (type) val; \
+    mem_write_##type(addr, (type) val); \
 }
 
 #define GEN_OP_REG(name, expr, a2, a3, a4) \
@@ -246,6 +245,7 @@ static void interp__##name(CPUState *state, Instr *instr) \
     instr->exit_block = true; \
     state->trace.exit_reason = BLOCK_ECALL; \
     state->trace.target_pc = state->pc + 4; \
+    trap_throw(TRAP_ECALL_U, state->pc); \
 }
 
 #define GEN_CSR(name, a1, a2, a3, a4) \
@@ -268,8 +268,8 @@ static void interp__##name(CPUState *state, Instr *instr) \
 { \
     GuestVAddr addr = cpu_get_gpr(state, instr->rs1) + (i64) instr->imm; \
     u64 val = sizeof(type) == 8 ? \
-        *(u64 *) mmu_to_host(addr) : \
-        *(u32 *) mmu_to_host(addr) | (-1ULL << 32); \
+        mem_read_u64(addr) : \
+        mem_read_u32(addr) | (-1ULL << 32); \
     cpu_set_fpr_q(state, instr->rd, val); \
 }
 
@@ -278,7 +278,7 @@ static void interp__##name(CPUState *state, Instr *instr) \
 { \
     u64 src = cpu_get_fpr_q(state, instr->rs2); \
     GuestVAddr addr = cpu_get_gpr(state, instr->rs1) + (i64) instr->imm; \
-    *(type *) mmu_to_host(addr) = (type) src; \
+    mem_write_##type(addr, (type) src); \
 }
 
 #define GEN_FP_FMA4(name, view, type, expr, a4) \
@@ -352,23 +352,15 @@ typedef void (*InterpFunc)(CPUState *, Instr *);
 static InterpFunc funcs[] = { INSTRUCTION_LIST(X) };
 #undef X // Generate dispatch table
 
-bool interp_block(CPUState *state)
+void interp_block(CPUState *state)
 {
-#define return_defer(code) do { state->trace.error_code = code; goto defer; } while (0)
     Instr instr = {0};
-    jmp_buf trap_buf;
-
-    if (setjmp(trap_buf) != TRAP_OK)
-        return_defer(ERROR_INTERP);
-
-    trap_enter(&trap_buf);
 
     while (1) {
-        u32 raw = *(u32 *) mmu_to_host(state->pc);
-        state->trace.raw_data = raw;
+        u32 raw = mem_read_u32(state->pc);
 
         if (!decode_instr(raw, &instr))
-            return_defer(ERROR_DECODE);
+            trap_throw(TRAP_ILLEGAL_INSTR, state->pc);
 
         funcs[instr.kind](state, &instr);
 
@@ -377,10 +369,4 @@ bool interp_block(CPUState *state)
         else
             state->pc += instr.rvc ? 2 : 4;
     }
-
-defer:
-    trap_leave();
-    return state->trace.error_code == ERROR_NONE;
-#undef return_defer
 }
-
