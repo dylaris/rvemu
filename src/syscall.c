@@ -1,7 +1,11 @@
 #include "syscall.h"
 
 #include <stdlib.h>
+
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 const char *syscall_to_string(SyscallNr n)
 {
@@ -26,7 +30,14 @@ static u64 sys_exit_group(Machine *machine) { (void) machine; fatal("unimplement
 static u64 sys_getpid(Machine *machine) { (void) machine; fatal("unimplemented sys_getpid"); }
 static u64 sys_kill(Machine *machine) { (void) machine; fatal("unimplemented sys_kill"); }
 static u64 sys_tgkill(Machine *machine) { (void) machine; fatal("unimplemented sys_tgkill"); }
-static u64 sys_read(Machine *machine) { (void) machine; fatal("unimplemented sys_read"); }
+
+static u64 sys_read(Machine *machine)
+{
+    GET(fd, GPR_A0);
+    GET(buf, GPR_A1);
+    GET(count, GPR_A2);
+    return read(fd, (void *) mmu_to_host(buf), count);
+}
 
 static u64 sys_write(Machine *machine)
 {
@@ -36,18 +47,54 @@ static u64 sys_write(Machine *machine)
     return write(fd, (void *) mmu_to_host(buf), len);
 }
 
-static u64 sys_openat(Machine *machine) { (void) machine; fatal("unimplemented sys_openat"); }
+// the O_* macros is OS dependent.
+// here is a workaround to convert newlib flags to the host.
+#define NEWLIB_O_RDONLY   0x0
+#define NEWLIB_O_WRONLY   0x1
+#define NEWLIB_O_RDWR     0x2
+#define NEWLIB_O_APPEND   0x8
+#define NEWLIB_O_CREAT  0x200
+#define NEWLIB_O_TRUNC  0x400
+#define NEWLIB_O_EXCL   0x800
+#define REWRITE_FLAG(flag) if (flags & NEWLIB_ ##flag) hostflags |= flag;
+
+static int convert_flags(int flags)
+{
+    int hostflags = 0;
+    REWRITE_FLAG(O_RDONLY);
+    REWRITE_FLAG(O_WRONLY);
+    REWRITE_FLAG(O_RDWR);
+    REWRITE_FLAG(O_APPEND);
+    REWRITE_FLAG(O_CREAT);
+    REWRITE_FLAG(O_TRUNC);
+    REWRITE_FLAG(O_EXCL);
+    return hostflags;
+}
+
+static u64 sys_openat(Machine *machine)
+{
+    GET(dirfd, GPR_A0);
+    GET(path,  GPR_A1);
+    GET(flags, GPR_A2);
+    GET(mode,  GPR_A3);
+    return openat(dirfd, (const char *) mmu_to_host(path), convert_flags(flags), mode);
+}
 
 static u64 sys_close(Machine *machine)
 {
-    (void) machine;
     GET(fd, GPR_A0);
     if (fd > 2)
         return close(fd);
     return 0;
 }
 
-static u64 sys_lseek(Machine *machine) { (void) machine; fatal("unimplemented sys_lseek"); }
+static u64 sys_lseek(Machine *machine)
+{
+    GET(fd,     GPR_A0);
+    GET(offset, GPR_A1);
+    GET(whence, GPR_A2);
+    return lseek(fd, offset, whence);
+}
 
 static u64 sys_brk(Machine *machine)
 {
@@ -60,8 +107,26 @@ static u64 sys_brk(Machine *machine)
     return addr;
 }
 
-static u64 sys_linkat(Machine *machine) { (void) machine; fatal("unimplemented sys_linkat"); }
-static u64 sys_unlinkat(Machine *machine) { (void) machine; fatal("unimplemented sys_unlinkat"); }
+static u64 sys_linkat(Machine *machine)
+{
+    GET(olddirfd, GPR_A0);
+    GET(oldpath,  GPR_A1);
+    GET(newdirfd, GPR_A2);
+    GET(newpath,  GPR_A3);
+    GET(flags,    GPR_A4);
+    return linkat(olddirfd, (const char *) mmu_to_host(oldpath),
+                  newdirfd, (const char *) mmu_to_host(newpath),
+                  convert_flags(flags));
+}
+
+static u64 sys_unlinkat(Machine *machine)
+{
+    GET(dirfd, GPR_A0);
+    GET(path,  GPR_A1);
+    GET(flags, GPR_A2);
+    return unlinkat(dirfd, (const char *) mmu_to_host(path), convert_flags(flags));
+}
+
 static u64 sys_mkdirat(Machine *machine) { (void) machine; fatal("unimplemented sys_mkdirat"); }
 static u64 sys_renameat(Machine *machine) { (void) machine; fatal("unimplemented sys_renameat"); }
 static u64 sys_chdir(Machine *machine) { (void) machine; fatal("unimplemented sys_chdir"); }
@@ -69,7 +134,6 @@ static u64 sys_getcwd(Machine *machine) { (void) machine; fatal("unimplemented s
 
 static u64 sys_fstat(Machine *machine)
 {
-    (void) machine;
     GET(fd, GPR_A0);
     GET(addr, GPR_A1);
     return fstat(fd, (struct stat *) mmu_to_host(addr));
@@ -94,7 +158,15 @@ static u64 sys_prlimit64(Machine *machine) { (void) machine; fatal("unimplemente
 static u64 sys_getmainvars(Machine *machine) { (void) machine; fatal("unimplemented sys_getmainvars"); }
 static u64 sys_rt_sigaction(Machine *machine) { (void) machine; fatal("unimplemented sys_rt_sigaction"); }
 static u64 sys_writev(Machine *machine) { (void) machine; fatal("unimplemented sys_writev"); }
-static u64 sys_gettimeofday(Machine *machine) { (void) machine; fatal("unimplemented sys_gettimeofday"); }
+
+static u64 sys_gettimeofday(Machine *machine)
+{
+    GET(tv, GPR_A0);
+    GET(tz, GPR_A1);
+    return gettimeofday((struct timeval *) mmu_to_host(tv),
+                        tz != 0 ? (struct timezone *) mmu_to_host(tz) : NULL);
+}
+
 static u64 sys_times(Machine *machine) { (void) machine; fatal("unimplemented sys_times"); }
 static u64 sys_fcntl(Machine *machine) { (void) machine; fatal("unimplemented sys_fcntl"); }
 static u64 sys_ftruncate(Machine *machine) { (void) machine; fatal("unimplemented sys_ftruncate"); }
@@ -112,9 +184,29 @@ static u64 sys_set_tid_address(Machine *machine) { (void) machine; fatal("unimpl
 static u64 sys_set_robust_list(Machine *machine) { (void) machine; fatal("unimplemented sys_set_robust_list"); }
 static u64 sys_madvise(Machine *machine) { (void) machine; fatal("unimplemented sys_madvise"); }
 static u64 sys_statx(Machine *machine) { (void) machine; fatal("unimplemented sys_statx"); }
-static u64 sys_open(Machine *machine) { (void) machine; fatal("unimplemented sys_open"); }
-static u64 sys_link(Machine *machine) { (void) machine; fatal("unimplemented sys_link"); }
-static u64 sys_unlink(Machine *machine) { (void) machine; fatal("unimplemented sys_unlink"); }
+
+static u64 sys_open(Machine *machine)
+{
+    GET(path,  GPR_A0);
+    GET(flags, GPR_A1);
+    GET(mode,  GPR_A2);
+    return open((const char *) mmu_to_host(path), convert_flags(flags), mode);
+}
+
+static u64 sys_link(Machine *machine)
+{
+    GET(oldpath, GPR_A0);
+    GET(newpath, GPR_A0);
+    return link((const char *) mmu_to_host(oldpath), (const char *) mmu_to_host(newpath));
+}
+
+
+static u64 sys_unlink(Machine *machine)
+{
+    GET(path, GPR_A0);
+    return unlink((const char *) mmu_to_host(path));
+}
+
 static u64 sys_mkdir(Machine *machine) { (void) machine; fatal("unimplemented sys_mkdir"); }
 static u64 sys_access(Machine *machine) { (void) machine; fatal("unimplemented sys_access"); }
 static u64 sys_stat(Machine *machine) { (void) machine; fatal("unimplemented sys_stat"); }

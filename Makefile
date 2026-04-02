@@ -1,5 +1,5 @@
 CC 	     = clang
-CFLAGS   = -ggdb -Wall -Wextra -O3 -Iinclude/
+CFLAGS   = -ggdb -Wall -Wextra -O0 -Iinc/ -DTEST_TVM
 CLDFLAGS = -lm
 
 EXE_CFLAGS  = $(CFLAGS)
@@ -8,7 +8,7 @@ EXE_LDFLAGS = $(CLDFLAGS)
 LIB_CFLAGS  = $(CFLAGS) -fPIC
 LIB_LDFLAGS = $(CLDFLAGS) -shared -Wl,--version-script=src/export.sym
 
-all: rvemu lib
+all: rvemu
 
 rvemu: src/one.c
 	$(CC) $(EXE_CFLAGS) -o rvemu src/one.c $(EXE_LDFLAGS)

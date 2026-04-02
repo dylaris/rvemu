@@ -1,6 +1,5 @@
 #include "machine.h"
 #include "syscall.h"
-#include "trap.h"
 
 static void machine__load(Machine *machine, const char *prog)
 {
@@ -8,7 +7,11 @@ static void machine__load(Machine *machine, const char *prog)
     if (!f)
         fatal(strerror(errno));
 
+#ifdef TEST_TVM
+    mem_load_bin(&machine->mem, f, 0x80000000);
+#else
     mem_load_elf(&machine->mem, f);
+#endif
 
     fclose(f);
 
@@ -47,15 +50,6 @@ static void machine__setup(Machine *machine, int argc, char **argv)
     mem_write(stack_end, (void *) &argc, sizeof(argc));
 }
 
-void machine_step(Machine *machine)
-{
-    while (1) {
-        cpu_clean_trace(&machine->state);
-        interp_block(&machine->state);
-        machine->state.pc = machine->state.trace.target_pc;
-    }
-}
-
 static void do_syscall(Machine *machine)
 {
     SyscallNr n = (SyscallNr) cpu_get_gpr(&machine->state, GPR_A7);
@@ -64,26 +58,26 @@ static void do_syscall(Machine *machine)
     cpu_set_gpr(&machine->state, GPR_A0, ret);
 }
 
-static void do_trap(Machine *machine, Trap trap)
+static void do_trap(Machine *machine)
 {
-    switch (trap.kind) {
-    case TRAP_ECALL_U:
+    switch (machine->state.flow.ctl) {
+    case FLOW_ECALL:
         do_syscall(machine);
-        machine->state.pc += 4;
+        machine->state.pc = machine->state.flow.pc;
         break;
 
-    case TRAP_ILLEGAL_INSTR:
-        fatalf("illegal instruction '' @ 0x%016lx", trap.fault_addr);
+    case FLOW_ILLEGAL_INSTR:
+        fatalf("illegal instruction '0x%08x' @ 0x%016lx", mem_read_u32(machine->state.pc), machine->state.pc);
 
-    case TRAP_LOAD_FAULT:
-    case TRAP_STORE_FAULT:
-        fatalf("memory access fault @ 0x%016lx", trap.fault_addr);
+    case FLOW_LOAD_FAULT:
+    case FLOW_STORE_FAULT:
+        fatalf("memory access fault @ 0x%016lx", machine->state.pc);
 
-    case TRAP_LOAD_MISALIGN:
-    case TRAP_STORE_MISALIGN:
-        fatalf("memory align fault @ 0x%016lx", trap.fault_addr);
+    case FLOW_LOAD_MISALIGN:
+    case FLOW_STORE_MISALIGN:
+        fatalf("memory align fault @ 0x%016lx", machine->state.pc);
 
-    case TRAP_CRASH:
+    case FLOW_CRASH:
         fatalf("this emulator crashed: %s", strerror(errno));
 
     default:
@@ -91,28 +85,40 @@ static void do_trap(Machine *machine, Trap trap)
     }
 }
 
+BlockExec machine_dispatch(Machine *machine)
+{
+    (void) machine;
+    return interp_block;
+}
+
+void machine_step(Machine *machine, BlockExec func)
+{
+    cpu_reset_flow(&machine->state);
+    func(&machine->state);
+}
+
 bool machine_run(Machine *machine)
 {
-    jmp_buf trap_buf;
-
-    trap_init();
-
-    while (1) {
-        if (setjmp(trap_buf) == 0) {
-            trap_enter(&trap_buf);
-            machine_step(machine);
-            trap_leave();
-        } else {
-            Trap trap = trap_get();
-            do_trap(machine, trap);
-        }
+    while (true) {
+        BlockExec func = machine_dispatch(machine);
+        machine_step(machine, func);
+        if (IS_TRAP(machine->state.flow.ctl))
+            do_trap(machine);
+        else
+            machine->state.pc = machine->state.flow.pc;
     }
 }
 
 void machine_init(Machine *machine, const char *prog, int argc, char **argv)
 {
     machine__load(machine, prog);
+#ifdef TEST_TVM
+    (void) argc;
+    (void) argv;
+    cpu_set_gpr(&machine->state, GPR_SP, 0x8010000);
+#else
     machine__setup(machine, argc-1, argv+1);
+#endif
 }
 
 void machine_fini(Machine *machine)

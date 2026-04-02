@@ -8,8 +8,8 @@ int main(int argc, char **argv)
     Machine machine = {0};
     machine_init(&machine, argv[1], argc, argv);
 
-#if 0
-    printf("entry address:   0x%016lx\n", TO_HOST(machine.mmu.entry));
+#if 1
+    printf("entry address:   0x%016lx\n", machine.mem.entry);
     printf("machine address: 0x%016lx\n", (HostVAddr) &machine);
 #endif
 

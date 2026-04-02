@@ -1,6 +1,5 @@
 #include "interp.h"
 #include "decode.h"
-#include "trap.h"
 
 #include <math.h>
 
@@ -220,9 +219,9 @@ static void interp__##name(CPUState *state, Instr *instr) \
     u64 rs2 = cpu_get_gpr(state, instr->rs2); \
     GuestVAddr addr = state->pc + (i64) instr->imm; \
     if (expr) { \
-        instr->exit_block = true; \
-        state->trace.exit_reason = BLOCK_JUMP; \
-        state->trace.target_pc = addr; \
+        instr->cfc = true; \
+        state->flow.ctl = FLOW_BRANCH; \
+        state->flow.pc = addr; \
     } \
 }
 
@@ -233,19 +232,27 @@ static void interp__##name(CPUState *state, Instr *instr) \
     i64 imm = (i64) instr->imm; \
     u64 pc = state->pc; \
     cpu_set_gpr(state, instr->rd, pc + (instr->rvc ? 2 : 4)); \
-    instr->exit_block = true; \
-    state->trace.exit_reason = BLOCK_JUMP; \
-    state->trace.target_pc = (addr); \
+    instr->cfc = true; \
+    state->flow.ctl = FLOW_JUMP; \
+    state->flow.pc = (addr); \
     (void) rs1; \
 }
 
-#define GEN_ECALL(name, a1, a2, a3, a4) \
-static void interp__##name(CPUState *state, Instr *instr) \
-{ \
-    instr->exit_block = true; \
-    state->trace.exit_reason = BLOCK_ECALL; \
-    state->trace.target_pc = state->pc + 4; \
-    trap_throw(TRAP_ECALL_U, state->pc); \
+#define GEN_ECALL(name, a1, a2, a3, a4)
+static void interp__ecall(CPUState *state, Instr *instr)
+{
+#ifdef TEST_TVM
+    if (cpu_get_gpr(state, GPR_A7) == SYS_exit) {
+        u64 ret = cpu_get_gpr(state, GPR_A0);
+        if (ret == 0)
+            printf("Test PASS\n");
+        else
+            printf("Test #%lu FAIL\n", ret / 2);
+    }
+#endif
+    instr->cfc = true;
+    state->flow.ctl = FLOW_ECALL;
+    state->flow.pc = state->pc + 4;
 }
 
 #define GEN_CSR(name, a1, a2, a3, a4) \
@@ -359,12 +366,14 @@ void interp_block(CPUState *state)
     while (1) {
         u32 raw = mem_read_u32(state->pc);
 
-        if (!decode_instr(raw, &instr))
-            trap_throw(TRAP_ILLEGAL_INSTR, state->pc);
+        if (!decode_instr(raw, &instr)) {
+            state->flow.ctl = FLOW_ILLEGAL_INSTR;
+            return;
+        }
 
         funcs[instr.kind](state, &instr);
 
-        if (instr.exit_block)
+        if (instr.cfc)
             break;
         else
             state->pc += instr.rvc ? 2 : 4;

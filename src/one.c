@@ -1,5 +1,4 @@
 #include "memory.c"
-#include "trap.c"
 #include "syscall.c"
 #include "decode.c"
 #include "interp.c"

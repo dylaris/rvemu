@@ -1,9 +1,6 @@
-test/fib
-test/hello
-test/prime
 rvemu
 librvemu.so
 tags
 tmp/
-test/asm/*.bin
-test/discard
+discard
+riscv-tests/

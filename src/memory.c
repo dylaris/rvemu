@@ -79,6 +79,33 @@ void mem_load_elf(Memory *mem, FILE *f)
     }
 }
 
+void mem_load_bin(Memory *mem, FILE *f, GuestVAddr base)
+{
+    mem->entry = base;
+
+    fseek(f, 0, SEEK_END);
+    u64 file_size = ftell(f);
+    rewind(f);
+
+    u64 page_size = getpagesize();
+    HostVAddr vaddr = mmu_to_host(base);
+    HostVAddr aligned_vaddr = ROUNDDOWN(vaddr, page_size);
+    u64 mem_size = file_size + (aligned_vaddr - vaddr);
+
+    HostVAddr mmap_vaddr = (HostVAddr) mmap(
+        (void *) aligned_vaddr,
+        mem_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+        MAP_FIXED | MAP_PRIVATE,
+        fileno(f), 0
+    );
+    assert(mmap_vaddr == aligned_vaddr);
+
+    if (fread((void *) vaddr, 1, file_size, f) != file_size)
+        fatal("failed to read binary file");
+
+    printf("loaded binary at 0x%016lx, size 0x%zx\n", base, file_size);
+}
+
 GuestVAddr mem_alloc(Memory *mem, i64 size)
 {
     u64 page_size = getpagesize();
