@@ -5,9 +5,12 @@
 # ==============================
 PROJ_DIR="/home/aris/project/rvsim"
 EMU="${PROJ_DIR}/rvsim"
-TEST_DIR="${PROJ_DIR}/riscv-tests/isa"
-REPORT="${PROJ_DIR}/report/test_report.txt"
-FAIL_LIST="${PROJ_DIR}/report/test_failures.txt"
+TEST_DIR="${PROJ_DIR}/riscv-tests/build/share/riscv-tests/isa/"
+REPORT_DIR="${PROJ_DIR}/report/tvm"
+REPORT="${REPORT_DIR}/tvm_report.txt"
+FAIL_LIST="${REPORT_DIR}/tvm_failures.txt"
+
+mkdir -p $REPORT_DIR
 
 # Clear previous reports
 > "$REPORT"
@@ -39,8 +42,8 @@ for suite in $SUITES; do
 
         echo -n "Testing: $name ... "
 
-        # Run emulator
-        output=$($EMU "--bin $bin" 2>&1)
+        # 🔥🔥🔥 这一行修好了！
+        output=$($EMU --bin "$bin" 2>&1)
         exit_code=$?
 
         if [ "$exit_code" -eq 0 ]; then

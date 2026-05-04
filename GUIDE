@@ -1,9 +1,4 @@
-# test tvm
-
-## Start
-```console
-make test
-```
+# tvm
 
 ## compile riscv-tests
 
@@ -12,22 +7,17 @@ git clone https://github.com/riscv-software-src/riscv-tests.git
 cd riscv-tests
 git submodule update --init --recursive
 autoconf
-./configure --prefix=$PWD/build --with-xlen=64
-make -j$(nproc) XLEN=64 RISCV_PREFIX=$HOME/opt/rv64-unknown-elf/bin/riscv64-unknown-elf-
+./configure --prefix=$PWD/build
+make
 ```
 
 ## test
 ```console
 ./script/elf2bin.sh
-./script/test_tvm.sh
+./script/tvm.sh
 ```
 
-# run lua5.5.0
-
-## Start
-```console
-make
-```
+# lua
 
 ## compile lua5.5.0
 
@@ -45,7 +35,7 @@ sh ./build.sh
 
 set -xe
 
-RISCV_PREFIX="$HOME/opt/rv64-unknown-elf/bin/riscv64-unknown-elf-"
+RISCV_PREFIX="riscv64-unknown-elf-"
 INSTALL_TOP="$HOME/opt/lua-5.5.0"
 CC="${RISCV_PREFIX}gcc -std=gnu99"
 AR="${RISCV_PREFIX}ar rcu"

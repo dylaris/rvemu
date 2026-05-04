@@ -1,21 +1,22 @@
 #!/bin/sh
 
-cd riscv-tests/isa
+TEST_DIR="riscv-tests/build/share/riscv-tests/isa"
 
-RISCV_PREFIX=/home/aris/opt/rv64-unknown-elf/bin/riscv64-unknown-elf-
-
-for elf in rv64{ui,um,uf,ud,uc}-p-*; do
-    if [[ "$elf" == *.bin ]]; then
-        continue
-    fi
+for elf in "$TEST_DIR"/rv64{ui,um,uf,ud,uc}-p-*; do
+    case "$elf" in
+        *.bin|*.dump) continue ;;
+    esac
 
     [ -f "$elf" ] || continue
-    [ -x "$elf" ] || continue
 
-    ${RISCV_PREFIX}objcopy \
+    binfile="${elf}.bin"
+
+    echo "Converting: $elf -> $binfile"
+
+    riscv64-unknown-elf-objcopy \
       -O binary \
       --only-section=.text \
       --only-section=.data \
       --only-section=.rodata \
-      "$elf" "$elf.bin"
+      "$elf" "$binfile"
 done
