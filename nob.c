@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
     da_appendw(&cflags, "-Wall", "-Wextra", "-Wno-unused-function", "-Wno-unused-parameter", "-Wno-unused-variable");
     da_appendw(&cflags, "-I"INCLUDE, "-I3rdparty");
-    da_appendw(&cldflags, "-L3rdparty", "-lm", "-l:libtcc.a");
+    da_appendw(&cldflags, "-lm");
 
     Cmd cmd = {0};
 
