@@ -11,8 +11,6 @@ REPORT="${REPORT_DIR}/tvm_report.txt"
 FAIL_LIST="${REPORT_DIR}/tvm_failures.txt"
 
 mkdir -p $REPORT_DIR
-
-# Clear previous reports
 > "$REPORT"
 > "$FAIL_LIST"
 
@@ -32,31 +30,36 @@ echo "================================================"
 for suite in $SUITES; do
     echo -e "\n>>> Test Suite: $suite"
 
-    for bin in "$TEST_DIR"/"$suite"-p-*.bin; do
-        if [ ! -f "$bin" ]; then
-            continue
-        fi
+    pass_bins=()
+    fail_bins=()
 
+    for bin in "$TEST_DIR"/"$suite"-p-*.bin; do
+        [ -f "$bin" ] || continue
         TOTAL=$((TOTAL + 1))
         name=$(basename "$bin")
 
-        echo -n "Testing: $name ... "
-
-        # 🔥🔥🔥 这一行修好了！
         output=$($EMU --bin "$bin" 2>&1)
         exit_code=$?
 
         if [ "$exit_code" -eq 0 ]; then
-            echo -e "\033[32mPASS\033[0m"
+            pass_bins+=("$name")
             echo "[PASS] $name" >> "$REPORT"
             PASS=$((PASS + 1))
         else
-            echo -e "\033[31mFAIL\033[0m (code: $exit_code)"
+            fail_bins+=("$name")
             echo "[FAIL] $name (exit: $exit_code)" >> "$REPORT"
             echo "$name" >> "$FAIL_LIST"
             FAIL=$((FAIL + 1))
         fi
     done
+
+    # Print compressed summary line
+    if [ ${#pass_bins[@]} -gt 0 ]; then
+        printf "Testing: { %s }: \033[32mAll PASS\033[0m\n" "$(IFS=', '; echo "${pass_bins[*]}")"
+    fi
+    if [ ${#fail_bins[@]} -gt 0 ]; then
+        printf "\033[31mFailed: { %s }\033[0m\n" "$(IFS=', '; echo "${fail_bins[*]}")"
+    fi
 done
 
 # ==============================
@@ -69,8 +72,4 @@ echo "Passed:      $PASS"
 echo "Failed:      $FAIL"
 echo "================================================"
 
-if [ "$FAIL" -gt 0 ]; then
-    echo -e "\nFailed tests are logged in: $FAIL_LIST"
-else
-    echo -e "\n✅ All tests passed!"
-fi
+[ "$FAIL" -gt 0 ] && echo -e "\nFailed tests are logged in: $FAIL_LIST" || echo -e "\n✅ All tests passed!"
