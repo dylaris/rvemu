@@ -7,7 +7,6 @@ typedef enum {
     PURE,
     CACHE,
     DEBUG,
-    LIBRARY,
     CLEAN,
     INVALID
 } Flag;
@@ -21,7 +20,6 @@ static Flag what_flag(int argc, char **argv)
     if (strcmp(flag_str, "pure")    == 0) return PURE;
     if (strcmp(flag_str, "cache")   == 0) return CACHE;
     if (strcmp(flag_str, "debug")   == 0) return DEBUG;
-    if (strcmp(flag_str, "lib")     == 0) return LIBRARY;
     if (strcmp(flag_str, "clean")   == 0) return CLEAN;
     return INVALID;
 }
@@ -36,7 +34,6 @@ static void print_help_message(void)
         "  clean:    Clean generated files     \n"
         "  pure:     Interp only               \n"
         "  cache:    Interp with cache         \n"
-        "  lib:      Build library             \n"
         "  debug:    Build debug version       \n"
         "======================================\n"
     );
@@ -82,21 +79,10 @@ void build_debug(void)
     output = "rvsim";
 }
 
-void build_library(void)
-{
-    da_appendw(&cflags, "-O3", "-fPIC");
-    da_appendw(&cldflags, "-shared");
-    input = SOURCE"one.c";
-    output = "librvsim.so";
-}
-
 bool clean(void)
 {
     if (nob_file_exists("rvsim")) {
         if (!nob_delete_file("rvsim")) return false;
-    }
-    if (nob_file_exists("librvsim.so")) {
-        if (!nob_delete_file("librvsim.so")) return false;
     }
     return true;
 }
@@ -124,9 +110,6 @@ int main(int argc, char **argv)
         break;
     case DEBUG:
         build_debug();
-        break;
-    case LIBRARY:
-        build_library();
         break;
     case CLEAN:
         if (!clean()) return 1;

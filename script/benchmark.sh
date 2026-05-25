@@ -2,19 +2,14 @@
 
 set -xe
 
-echo "Testing tbcache..."
-./nob tbcache
-./rvsim --elf bin/nbench > tbcache.txt
+echo "Testing cache..."
+./nob cache
+./rvsim --elf bin/nbench > cache.txt
 sync
 
-echo "Testing dbcache..."
-./nob dbcache
-./rvsim --elf bin/nbench > dbcache.txt
-sync
-
-echo "Testing interp..."
-./nob interp
-./rvsim --elf bin/nbench > interp.txt
+echo "Testing pure..."
+./nob pure
+./rvsim --elf bin/nbench > pure.txt
 sync
 
 echo "All tests completed."
